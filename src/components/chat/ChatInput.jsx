@@ -30,7 +30,7 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
 	};
 
 	return (
-		<form className='w-full p-4 bg-background/80 backdrop-blur-sm'>
+		<form className='w-full p-4 pb-0 bg-background/80 backdrop-blur-sm'>
 			<div className='flex items-end space-x-2'>
 				<input
 					ref={textareaRef}
@@ -47,6 +47,9 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
 					className='bg-blue-200 rounded py-2 px-4 hover:bg-blue-400 hover:text-white font-medium'>
 					Send
 				</button>
+			</div>
+			<div className='mt-2 mb-0 text-gray-400 text-sm text-center'>
+				Please note that you are interacting with an AI-powered assistant.
 			</div>
 		</form>
 	);
