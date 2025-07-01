@@ -27,7 +27,7 @@ function App() {
 	}, [messages, currentBotMessage]);
 
 	useEffect(() => {
-		ws.current = new WebSocket('ws://localhost:8001/chat');
+		ws.current = new WebSocket('ws://localhost:8001/chat/USER1234');
 
 		ws.current.onopen = () => {
 			console.log('WebSocket connection opened');
@@ -36,72 +36,67 @@ function App() {
 		ws.current.onmessage = (event) => {
 			const data = event.data;
 
-			if (data === '[END]') {
-				// if (currentBotMessageRef.current) {
-				// 	setMessages((prev) => [...prev, currentBotMessageRef.current]);
-				// 	setCurrentBotMessage(null);
-				// 	currentBotMessageRef.current = null;
-				// }
-
-				try {
-					const fullResponse = JSON.parse(textBufferRef.current);
-					const { response, options } = fullResponse;
-
-					const botMessage = {
-						id: Date.now().toString(),
-						content: response,
-						role: 'bot',
-						timestamp: Date.now(),
-					};
-					setMessages((prev) => [...prev, botMessage]);
-					setCurrentBotMessage(null);
-					currentBotMessageRef.current = null;
-					textBufferRef.current = '';
-					setOptions(options || []);
-					setIsLoading(false);
-				} catch (err) {
-					console.log(err);
-					setIsLoading(false);
-					setOptions([]);
-				}
-			} else {
-				textBufferRef.current += data;
-				// setCurrentBotMessage((prev) => {
-				// 	if (prev) {
-				// 		const updated = {
-				// 			...prev,
-				// 			content: prev.content + data,
-				// 		};
-				// 		currentBotMessageRef.current = updated;
-				// 		return updated;
-				// 	} else {
-				// 		const botMessage = {
-				// 			id: Date.now().toString(),
-				// 			content: data,
-				// 			role: 'bot',
-				// 			timestamp: Date.now(),
-				// 		};
-				// 		currentBotMessageRef.current = botMessage;
-				// 		return botMessage;
-				// 	}
-				// });
-
-				// try {
-				// 	textBufferRef.current += data;
-				// 	setCurrentBotMessage({
-				// 		id: Date.now().toString(),
-				// 		content: textBufferRef.current,
-				// 		role: 'bot',
-				// 		timestamp: Date.now(),
-				// 	});
-				// } catch (err) {
-				// 	console.error('Failed to parse JSON: ', err);
-				// }
+			if (!data || data === '[END]') {
+				console.log('Received an empty or END message, ignoring.');
+				setIsLoading(false); // Make sure to turn off loading
+				return;
 			}
+
+			// NON-STREAMING RESPONSE
+			try {
+				const fullResponse = JSON.parse(data);
+				const { response, options } = fullResponse;
+
+				const botMessage = {
+					id: Date.now().toString(),
+					content: response,
+					role: 'bot',
+					timestamp: Date.now(),
+				};
+				setMessages((prev) => [...prev, botMessage]);
+				// setCurrentBotMessage(null);
+				// currentBotMessageRef.current = null;
+				// textBufferRef.current = '';
+				setOptions(options || []);
+				setIsLoading(false);
+			} catch (error) {
+				console.log(error);
+				setIsLoading(false);
+				setOptions([]);
+			}
+
+			// STREAMING RESPONSE
+			// if (data === '[END]') {
+			// 	try {
+			// 		const fullResponse = JSON.parse(textBufferRef.current);
+			// 		const { response, options } = fullResponse;
+
+			// 		const botMessage = {
+			// 			id: Date.now().toString(),
+			// 			content: response,
+			// 			role: 'bot',
+			// 			timestamp: Date.now(),
+			// 		};
+			// 		setMessages((prev) => [...prev, botMessage]);
+			// 		setCurrentBotMessage(null);
+			// 		currentBotMessageRef.current = null;
+			// 		textBufferRef.current = '';
+			// 		setOptions(options || []);
+			// 		setIsLoading(false);
+			// 	} catch (err) {
+			// 		console.log(err);
+			// 		setIsLoading(false);
+			// 		setOptions([]);
+			// 	}
+			// } else {
+			// 	textBufferRef.current += data;
+			// 	// setIsLoading(false);
+			// }
 		};
 
 		ws.current.onclose = () => {
 			console.log('WebSocket connection closed');
+			setIsLoading(false);
 		};
 
 		ws.current.onerror = (error) => {
@@ -144,17 +139,23 @@ function App() {
 	};
 
 	return (
-		<div className=' w-full md:w-3/4 lg:w-1/2 h-screen max-h-screen flex flex-col items-center justify-center max-w-3xl my-1 mx-0 md:mx-auto lg:mx-auto border border-gray-300 p-3'>
-			<main className='flex flex-col flex-grow w-full overflow-y-scroll'>
+		<div className='relative w-full md:w-3/4 lg:w-1/2 h-screen max-h-screen flex flex-col items-center justify-center max-w-3xl mt-0 mb-1 mx-0 md:mx-auto lg:mx-auto border border-gray-300 p-3'>
+			<div className='absolute top-0 left-0 min-h-15 mb-2 w-full bg-gradient-to-r from-blue-600 to-violet-600 text-lg font-bold text-white flex flex-col items-center justify-start px-4'>
+				<p>USER123</p>
+				<p className='mt-1 mb-0 text-gray-200 text-sm text-center font-light'>
+					Chatting with AI Bot
+				</p>
+			</div>
+			<main className='flex flex-col flex-grow w-full overflow-y-auto'>
 				{messages.length === 0 && !isLoading ? (
-					<div className='flex flex-grow items-center justify-center'>
+					<div className='flex flex-grow mx-2 items-center justify-center'>
 						<ChatWelcome
 							onSuggestionClick={handleMessageSend}
 							isLoadingAiResponse={isLoading}
 						/>
 					</div>
 				) : (
-					<div>
+					<div className='my-14'>
 						{messages.map((message, index) => (
 							<ChatMessage key={index} message={message} />
 						))}

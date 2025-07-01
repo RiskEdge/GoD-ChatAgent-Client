@@ -9,7 +9,7 @@ const ChatWelcome = ({ onSuggestionClick, isLoadingAiResponse }) => {
 	const loadInitialPrompts = async () => {
 		setIsLoadingPrompts(true);
 		try {
-			const result = await fetch('http://localhost:8001/db_query/get_service_categories', {
+			const result = await fetch('http://localhost:8001/geek_query/get_service_categories', {
 				method: 'GET',
 				headers: {
 					'Content-Type': 'application/json',
@@ -25,7 +25,7 @@ const ChatWelcome = ({ onSuggestionClick, isLoadingAiResponse }) => {
 				.then((data) => {
 					// console.log(data);
 					const categories = data.categories
-						.slice(0, 5)
+						// .slice(0, 5)
 						.map((category) => category.title);
 					setPrompts(categories);
 					return data.categories;
@@ -45,14 +45,15 @@ const ChatWelcome = ({ onSuggestionClick, isLoadingAiResponse }) => {
 	}, []);
 
 	return (
-		<div className='flex flex-col items-center justify-center bg-gray-100/40 shadow-xl border border-gray-300 rounded-md p-6'>
+		<div className='flex flex-col items-center justify-center bg-gradient-to-br from-blue-100 via-blue-100 to-violet-100 shadow-xl border border-blue-300 rounded-md p-6'>
+			{/* <div className='flex flex-col items-center justify-center bg-gray-200/40 shadow-xl border border-gray-300 rounded-md p-6'> */}
 			<h1 className='text-3xl font-bold text-gray-600 '>Welcome to GoDChat</h1>
-			<p className='text-gray-400 text-center text-sm m-4'>
+			<p className='text-gray-500 text-center text-sm m-4'>
 				I'm an AI aassistant to collect information about your device.
 				<br />
 				What service are you looking for?
 			</p>
-			<div className='flex flex-col items-center justify-center'>
+			<div className='flex items-center justify-center flex-wrap'>
 				{isLoadingPrompts ? (
 					<>
 						<Skeleton />
