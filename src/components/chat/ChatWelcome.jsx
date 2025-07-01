@@ -9,12 +9,15 @@ const ChatWelcome = ({ onSuggestionClick, isLoadingAiResponse }) => {
 	const loadInitialPrompts = async () => {
 		setIsLoadingPrompts(true);
 		try {
-			const result = await fetch('http://localhost:8001/geek_query/get_service_categories', {
-				method: 'GET',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-			})
+			const result = await fetch(
+				`${import.meta.env.VITE_SERVER_URL}/geek_query/get_service_categories`,
+				{
+					method: 'GET',
+					headers: {
+						'Content-Type': 'application/json',
+					},
+				}
+			)
 				.then((res) => {
 					if (!res.ok) {
 						throw new Error(res.statusText);
