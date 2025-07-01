@@ -27,7 +27,9 @@ function App() {
 	}, [messages, currentBotMessage]);
 
 	useEffect(() => {
-		ws.current = new WebSocket('ws://localhost:8001/chat/USER1234');
+		ws.current = new WebSocket(
+			'wss://god-chatagent-server-production.up.railway.app/chat/test-user'
+		);
 
 		ws.current.onopen = () => {
 			console.log('WebSocket connection opened');
