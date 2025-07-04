@@ -11,6 +11,10 @@ function App() {
 	const [options, setOptions] = useState([]);
 	const [isLoading, setIsLoading] = useState(false);
 
+	const [textValue, setTextValue] = useState('');
+	const [userId, setUserId] = useState('');
+	const [errorMessage, setErrorMessage] = useState('');
+
 	const [currentBotMessage, setCurrentBotMessage] = useState(null);
 	const currentBotMessageRef = useRef(null);
 	const bottomRef = useRef(null);
@@ -21,14 +25,18 @@ function App() {
 	}, [messages, currentBotMessage]);
 
 	const ws = useRef(null);
+	// const userId = 'user1234';
 
 	useEffect(() => {
 		currentBotMessageRef.current = currentBotMessage;
 	}, [messages, currentBotMessage]);
 
 	useEffect(() => {
+		const conversationId = userId + '-conversation-id';
 		ws.current = new WebSocket(
-			'wss://god-chatagent-server-production.up.railway.app/chat/test-user'
+			`wss://${
+				import.meta.env.VITE_WEBSOCKET_URL
+			}/chat/${userId}?conversation_id=${conversationId}`
 		);
 
 		ws.current.onopen = () => {
@@ -110,9 +118,12 @@ function App() {
 				ws.current.close();
 			}
 		};
-	}, []);
+	}, [userId]);
 
 	const handleMessageSend = async (content) => {
+		if (!userId || userId === '') {
+			setErrorMessage('Please enter a user id to proceed!');
+		}
 		const userMessage = {
 			id: Date.now().toString(),
 			content: content,
@@ -140,16 +151,52 @@ function App() {
 		}
 	};
 
+	const handleUserIdChange = (event) => {
+		setTextValue(event.target.value);
+		// console.log(userId);
+	};
+
+	const handleUserIdKeyDown = (event) => {
+		if (event.key === 'Enter') {
+			setUserId(textValue);
+		}
+	};
+
+	const handleUserIdBlur = (event) => {
+		if (!userId || userId.trim() === '') {
+			setErrorMessage('Please enter a user id to proceed!');
+		} else {
+			setErrorMessage('');
+		}
+	};
+
 	return (
 		<div className='relative w-full md:w-3/4 lg:w-1/2 h-screen max-h-screen flex flex-col items-center justify-center max-w-3xl mt-0 mb-1 mx-0 md:mx-auto lg:mx-auto border border-gray-300 p-3'>
-			<div className='absolute top-0 left-0 min-h-15 mb-2 w-full bg-gradient-to-r from-blue-600 to-violet-600 text-lg font-bold text-white flex flex-col items-center justify-start px-4'>
-				<p>USER123</p>
-				<p className='mt-1 mb-0 text-gray-200 text-sm text-center font-light'>
+			<div className='absolute top-0 left-0 min-h-15 mb-2 w-full bg-gradient-to-r from-blue-600 to-violet-600 text-lg font-bold text-white flex flex-col  px-4 pt-3'>
+				<p>{userId}</p>
+
+				<p className='mt-1 mb-0 text-gray-200 text-sm text-start font-light'>
 					Chatting with AI Bot
 				</p>
 			</div>
 			<main className='flex flex-col flex-grow w-full overflow-y-auto'>
-				{messages.length === 0 && !isLoading ? (
+				{(!userId || userId === '') && (
+					<div className='flex flex-col flex-grow mx-2 items-center justify-center'>
+						<textarea
+							value={textValue}
+							rows='1'
+							placeholder='Enter user id'
+							onBlur={handleUserIdBlur}
+							onKeyDown={handleUserIdKeyDown}
+							onChange={handleUserIdChange}
+							className='font-bold text-black flex items-center justify-center w-full resize-none
+								 border-1 py-1 px-3'></textarea>
+						{errorMessage && (
+							<p className='text-red-500 text-sm font-light mt-2'>{errorMessage}</p>
+						)}
+					</div>
+				)}
+				{userId && userId !== '' && messages.length === 0 && !isLoading ? (
 					<div className='flex flex-grow mx-2 items-center justify-center'>
 						<ChatWelcome
 							onSuggestionClick={handleMessageSend}
@@ -190,9 +237,11 @@ function App() {
 				<div ref={bottomRef} />
 			</main>
 
-			<div className='sticky bottom-0 w-full'>
-				<ChatInput onSendMessage={handleMessageSend} isLoading={isLoading} />
-			</div>
+			{userId && userId !== '' && (
+				<div className='sticky bottom-0 w-full'>
+					<ChatInput onSendMessage={handleMessageSend} isLoading={isLoading} />
+				</div>
+			)}
 		</div>
 	);
 }
