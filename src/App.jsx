@@ -34,9 +34,7 @@ function App() {
 	useEffect(() => {
 		const conversationId = userId + '-conversation-id';
 		ws.current = new WebSocket(
-			`wss://${
-				import.meta.env.VITE_WEBSOCKET_URL
-			}/chat/${userId}?conversation_id=${conversationId}`
+			`${import.meta.env.VITE_WEBSOCKET_URL}/chat/${userId}?conversation_id=${conversationId}`
 		);
 
 		ws.current.onopen = () => {
