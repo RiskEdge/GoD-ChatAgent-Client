@@ -5,11 +5,14 @@ import ChatInput from './components/chat/ChatInput';
 import loader from './assets/loader.gif';
 import ChatWelcome from './components/chat/ChatWelcome';
 import ChatSuggestionButton from './components/ui/ChatSuggestionButton';
+import GeekCard from './components/ui/GeekCard';
 
 function App() {
 	const [messages, setMessages] = useState([]);
 	const [options, setOptions] = useState([]);
 	const [isLoading, setIsLoading] = useState(false);
+	const [isGeekOption, setIsGeekOption] = useState(false);
+	const [geeks, setGeeks] = useState([]);
 
 	const [textValue, setTextValue] = useState('');
 	const [userId, setUserId] = useState('');
@@ -53,6 +56,7 @@ function App() {
 			// NON-STREAMING RESPONSE
 			try {
 				const fullResponse = JSON.parse(data);
+				console.log(typeof fullResponse);
 				const { response, options } = fullResponse;
 
 				const botMessage = {
@@ -65,12 +69,22 @@ function App() {
 				// setCurrentBotMessage(null);
 				// currentBotMessageRef.current = null;
 				// textBufferRef.current = '';
-				setOptions(options || []);
+				if (response === 'Please select a Geek to proceed') {
+					setGeeks(options);
+					setIsGeekOption(true);
+					setOptions([]);
+				} else {
+					setGeeks([]);
+					setIsGeekOption(false);
+					setOptions(options || []);
+				}
 				setIsLoading(false);
 			} catch (error) {
 				console.log(error);
 				setIsLoading(false);
 				setOptions([]);
+				setGeeks([]);
+				setIsGeekOption(false);
 			}
 
 			// STREAMING RESPONSE
@@ -114,6 +128,7 @@ function App() {
 		return () => {
 			if (ws.current && ws.current.readyState === WebSocket.OPEN) {
 				ws.current.close();
+				<p>The connection has been closed.</p>;
 			}
 		};
 	}, [userId]);
@@ -168,6 +183,10 @@ function App() {
 		}
 	};
 
+	const handleGeekCardClick = (geek) => {
+		console.log(geek);
+	};
+
 	return (
 		<div className='relative w-full md:w-3/4 lg:w-1/2 h-screen max-h-screen flex flex-col items-center justify-center max-w-3xl mt-0 mb-1 mx-0 md:mx-auto lg:mx-auto border border-gray-300 p-3'>
 			<div className='absolute top-0 left-0 min-h-15 mb-2 w-full bg-gradient-to-r from-blue-600 to-violet-600 text-lg font-bold text-white flex flex-col  px-4 pt-3'>
@@ -218,16 +237,32 @@ function App() {
 						{/* {currentBotMessage && <ChatMessage message={currentBotMessage} />} */}
 
 						{/* Options shown after full bot response */}
-						{!isLoading && options.length > 0 && (
-							<div className='flex flex-wrap w-3/4'>
-								{options.map((option, index) => (
-									<ChatSuggestionButton
+
+						{!isLoading && isGeekOption && geeks.length > 0 ? (
+							<div className='flex flex-wrap w-full'>
+								{geeks.map((geek, index) => (
+									<GeekCard
+										// className='m-2'
 										key={index}
-										prompt={option}
-										onClick={handleMessageSend}
-										isLoading={isLoading}
+										geekData={geek}
+										handleGeekCardClick={handleGeekCardClick}
 									/>
 								))}
+							</div>
+						) : (
+							<div>
+								{!isLoading && options.length > 0 && (
+									<div className='flex flex-wrap w-3/4'>
+										{options.map((option, index) => (
+											<ChatSuggestionButton
+												key={index}
+												prompt={option}
+												onClick={handleMessageSend}
+												isLoading={isLoading}
+											/>
+										))}
+									</div>
+								)}
 							</div>
 						)}
 					</div>
