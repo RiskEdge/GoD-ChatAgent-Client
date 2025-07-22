@@ -9,6 +9,7 @@ import GeekCard from './components/ui/GeekCard';
 
 function App() {
 	const [messages, setMessages] = useState([]);
+	const [fetchedChatHistory, setFetchedChatHistory] = useState(false);
 	const [options, setOptions] = useState([]);
 	const [isLoading, setIsLoading] = useState(false);
 	const [isGeekOption, setIsGeekOption] = useState(false);
@@ -16,6 +17,7 @@ function App() {
 
 	const [textValue, setTextValue] = useState('');
 	const [userId, setUserId] = useState('');
+	const [conversationId, setConversationId] = useState('');
 	const [errorMessage, setErrorMessage] = useState('');
 
 	const [currentBotMessage, setCurrentBotMessage] = useState(null);
@@ -30,12 +32,49 @@ function App() {
 	const ws = useRef(null);
 	// const userId = 'user1234';
 
+	const getChatHistory = async () => {
+		const chatHistory = await fetch(
+			`${import.meta.env.VITE_SERVER_URL}/chat/chat_history/${conversationId}`,
+			{
+				method: 'GET',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+			}
+		).then(async (res) => {
+			if (res.ok) {
+				const data = await res.json();
+				if (!data[0]) return;
+				if (data[0].chat_messages.length === 0) return;
+				// console.log(data);
+				const formattedMessages = data[0].chat_messages.map((message) => {
+					return {
+						id: Date.now().toString(),
+						content: message.message,
+						role: message.sender,
+						timestamp: message.sentAt,
+					};
+				});
+				setMessages(formattedMessages);
+				setFetchedChatHistory(true);
+			}
+		});
+	};
+
+	useEffect(() => {
+		if (userId) {
+			if (messages.length <= 0) {
+				getChatHistory();
+			}
+		}
+	}, [userId]);
+
 	useEffect(() => {
 		currentBotMessageRef.current = currentBotMessage;
 	}, [messages, currentBotMessage]);
 
 	useEffect(() => {
-		const conversationId = userId + '-conversation-id';
+		// setConversationId(userId + '-conversation-id');
 		ws.current = new WebSocket(
 			`${import.meta.env.VITE_WEBSOCKET_URL}/chat/${userId}?conversation_id=${conversationId}`
 		);
@@ -56,8 +95,8 @@ function App() {
 			// NON-STREAMING RESPONSE
 			try {
 				const fullResponse = JSON.parse(data);
-				console.log(typeof fullResponse);
 				const { response, options } = fullResponse;
+				console.log(response);
 
 				const botMessage = {
 					id: Date.now().toString(),
@@ -70,7 +109,10 @@ function App() {
 				// currentBotMessageRef.current = null;
 				// textBufferRef.current = '';
 				if (response === 'Please select a Geek to proceed') {
-					setGeeks(options);
+					const geekOptions = JSON.parse(options[0]);
+					const suitableGeeks = geekOptions.geeks;
+					console.log(suitableGeeks);
+					setGeeks(suitableGeeks);
 					setIsGeekOption(true);
 					setOptions([]);
 				} else {
@@ -145,7 +187,7 @@ function App() {
 		};
 		setMessages((prev) => {
 			const updated = [...prev, userMessage];
-			console.log('', updated);
+			// console.log('', updated);
 			return updated;
 		});
 		setIsLoading(true);
@@ -172,6 +214,7 @@ function App() {
 	const handleUserIdKeyDown = (event) => {
 		if (event.key === 'Enter') {
 			setUserId(textValue);
+			setConversationId(textValue + '-conversation-id');
 		}
 	};
 
@@ -187,14 +230,71 @@ function App() {
 		console.log(geek);
 	};
 
+	const handleClearConversation = async () => {
+		try {
+			const response = await fetch(
+				`${import.meta.env.VITE_SERVER_URL}/chat/delete/${conversationId}`,
+				{
+					method: 'DELETE',
+					headers: {
+						'Content-Type': 'application/json',
+					},
+				}
+			);
+
+			if (response.ok) {
+				setMessages([]);
+				setFetchedChatHistory(false);
+				console.log('Chat history deleted successfully');
+			} else {
+				console.error('Failed to delete chat history');
+			}
+		} catch (error) {
+			console.error('Error deleting chat history:', error);
+		}
+	};
+
+	const handleContinueChat = async () => {
+		setFetchedChatHistory(true);
+		if (ws.current && ws.current.readyState === WebSocket.CLOSED) {
+			ws.current = new WebSocket(
+				`${
+					import.meta.env.VITE_WEBSOCKET_URL
+				}/chat/${userId}?conversation_id=${conversationId}`
+			);
+		}
+
+		if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+			console.log('WebSocket connection opened to continue chat with agent.');
+			setIsLoading(true);
+			ws.current.send(
+				JSON.stringify({
+					action: 'continue_conversation',
+					chat_history: messages.map((message) => ({
+						role: message.role,
+						message: message.content,
+					})),
+				})
+			);
+		}
+		setFetchedChatHistory(false);
+	};
+
 	return (
 		<div className='relative w-full md:w-3/4 lg:w-1/2 h-screen max-h-screen flex flex-col items-center justify-center max-w-3xl mt-0 mb-1 mx-0 md:mx-auto lg:mx-auto border border-gray-300 p-3'>
-			<div className='absolute top-0 left-0 min-h-15 mb-2 w-full bg-gradient-to-r from-blue-600 to-violet-600 text-lg font-bold text-white flex flex-col  px-4 pt-3'>
-				<p>{userId}</p>
+			<div className='absolute justify-between top-0 left-0 min-h-15 mb-2 w-full bg-gradient-to-r from-blue-600 to-violet-600 text-lg font-bold text-white flex flex-row px-4 pt-3'>
+				<div className='flex flex-col justify-between'>
+					<p>{userId}</p>
 
-				<p className='mt-1 mb-0 text-gray-200 text-sm text-start font-light'>
-					Chatting with AI Bot
-				</p>
+					<p className='mt-1 mb-0 text-gray-200 text-sm text-start font-light'>
+						Chatting with AI Bot
+					</p>
+				</div>
+				<button
+					onClick={handleClearConversation}
+					className='flex items-center w-fit font-medium right-0 border border-white px-3 mx-1 my-2 bg-transparent rounded-full text-wrap shadow-sm transition-all duration-150 ease-in-out transform hover:scale-105'>
+					Clear
+				</button>
 			</div>
 			<main className='flex flex-col flex-grow w-full overflow-y-auto'>
 				{(!userId || userId === '') && (
@@ -232,6 +332,24 @@ function App() {
 							messages[messages.length - 1].role === 'user' && (
 								<img src={loader} alt='loading' width={50} height={50} />
 							)}
+
+						{fetchedChatHistory && (
+							<div className='flex flex-col items-center mx-auto my-3 justify-center border border-gray-300 p-3 w-1/2'>
+								<p className='font-bold mb-3'>Continue chat?</p>
+								<div className='flex flex-row gap-x-6'>
+									<button
+										onClick={handleContinueChat}
+										className='bg-blue-400 px-4 py-1 rounded-lg text-white border border-blue-400 hover:scale-105'>
+										Yes
+									</button>
+									<button
+										onClick={handleClearConversation}
+										className=' px-4 py-1 rounded-lg border border-blue-400 hover:bg-blue-400 hover:text-white hover:scale-105'>
+										No
+									</button>
+								</div>
+							</div>
+						)}
 
 						{/* Bot Streaming Message */}
 						{/* {currentBotMessage && <ChatMessage message={currentBotMessage} />} */}
